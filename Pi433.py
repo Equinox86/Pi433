@@ -4,6 +4,9 @@ import time
 import signal
 from Pulse import Pulse
 from copy import deepcopy
+import json
+
+
 
 LISTEN_PIN = 13
 signal_detected = False
@@ -22,11 +25,12 @@ def signalHandler(signum, frame):
 def pulseCopy(src):
     dest = Pulse()
     dest.rise = src.rise
-    dest.fall = src.fall 
+    dest.fall = src.fall
     dest.period = src.period
     dest.width = src.width
 
     return dest
+
 
 def pulseDetect(LISTEN_PIN):
 
@@ -40,7 +44,7 @@ def pulseDetect(LISTEN_PIN):
 
         # Add Pulse to the process queue
         qPulse = pulseCopy(currentPulse)
-        
+
         # Noise filter
         # if (qPulse.period > .01):
         pulseQueue.append(qPulse)
@@ -74,14 +78,33 @@ if __name__ == '__main__':
         GPIO.add_event_detect(LISTEN_PIN, GPIO.BOTH)
         GPIO.add_event_callback(LISTEN_PIN, pulseDetect)
 
-    # Main Loop
-    while(True):
-        time.sleep(2)
-        # Process the pulse queue
-        pulseCnt = len(pulseQueue)
-        print(pulseCnt)
+        # Load the protocols
+        f = open('protocols.json', 'r')
+        protos = json.loads(f.read())
 
-        for i in range(0,pulseCnt):
-            sigPulse = pulseQueue.pop(0)
-            print(str(i) + ":" +  str(sigPulse.period) + ":" + str((sigPulse.width)/sigPulse.period))
-    
+        while(True):
+            time.sleep(2)
+            # Process the pulse queue
+            pulseCnt = len(pulseQueue)
+
+            for i in range(0,pulseCnt):
+                sigPulse = pulseQueue.pop(0)
+                codes = {}
+
+                # Search in protocols
+                for p in protos:
+
+                    # Calculate protcol tolerance
+                    protoLowBound = (p['pulseLength'] - (p['pulseLength'] * tolerance/50))
+                    protoUpperBound = (p['pulseLength'] + (p['pulseLength'] * tolerance/50))
+
+                    codes[p['pulseLength']] = codes[p['pulseLength']] << 1
+
+                    # Check id Pulse is within tolerance
+                    if (sigPulse.width  in range(protoHighBound * p['0']['low'], protoHighBound * p['0']['high']):
+                    else if (sigPulse.width  in range(protoHighBound * p['1']['low'], protoHighBound * p['1']['high']):
+
+                    else :
+
+                # print(str(i) + ":" +  str(sigPulse.period) + ":" + str((sigPulse.width)/sigPulse.period))
+

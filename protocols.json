@@ -1,0 +1,98 @@
+[
+    {
+        "pulseLength": 350 ,
+        "syncBit" : 
+        { 
+            "high": 1, 
+            "low" : 31
+        },
+        "0": 
+        { 
+            "high": 3,
+            "low" : 1
+        },
+        "1": 
+        { 
+            "high": 3,
+            "low" : 1
+        }
+    },
+
+    {
+        "pulseLength": 650,
+        "syncBit" : 
+        { 
+            "high": 1, 
+            "low" : 10
+        },
+        "0": 
+        { 
+            "high": 1,
+            "low" : 2
+        },
+        "1": 
+        { 
+            "high": 2,
+            "low" : 1
+        }
+    },
+
+    {
+        "pulseLength": 100,
+        "syncBit" : 
+        { 
+            "high": 30, 
+            "low" : 71
+        },
+        "0": 
+        { 
+            "high": 4,
+            "low" : 11
+        },
+        "1": 
+        { 
+            "high": 9,
+            "low" : 6
+        }
+    },
+
+    {
+        "pulseLength": 380,
+        "syncBit" : 
+        { 
+            "high": 1, 
+            "low" : 6
+        },
+        "0": 
+        { 
+            "high": 1,
+            "low" : 3
+        },
+        "1": 
+        { 
+            "high": 3,
+            "low" : 1
+        } 
+    },
+
+    {
+        "pulseLength": 500,
+        "syncBit" : 
+        { 
+            "high": 6, 
+            "low" : 14
+        },
+        "0": 
+        { 
+            "high": 1,
+            "low" : 2
+        },
+        "1": 
+        { 
+            "high": 2,
+            "low" : 1
+        } 
+    }
+
+]
+
