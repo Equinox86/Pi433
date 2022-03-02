@@ -92,19 +92,16 @@ if __name__ == '__main__':
                 codes = {}
 
                 # Search in protocols
-                for p in protos:
+                for k,v in protos():
+                    print(k)
+                    print(v)
 
                     # Calculate protcol tolerance
-                    protoLowBound = (p['pulseLength'] - (p['pulseLength'] * tolerance/50))
-                    protoUpperBound = (p['pulseLength'] + (p['pulseLength'] * tolerance/50))
+                    protoLowBound = (protos[k]['pulseLength'] - (protos[k]['pulseLength'] * tolerance/50))
+                    protoUpperBound = (protos[k]['pulseLength'] + (protos[k]['pulseLength'] * tolerance/50))
 
-                    codes[p['pulseLength']] = codes[p['pulseLength']] << 1
-
-                    # Check id Pulse is within tolerance
-                    if (sigPulse.width  in range(protoHighBound * p['0']['low'], protoHighBound * p['0']['high']):
-                    else if (sigPulse.width  in range(protoHighBound * p['1']['low'], protoHighBound * p['1']['high']):
-
-                    else :
+                    # Is the period in line with the tolerance?
+                    if (sigPulse.period  in range(protoLowBound, protoLowBound):
 
                 # print(str(i) + ":" +  str(sigPulse.period) + ":" + str((sigPulse.width)/sigPulse.period))
 
