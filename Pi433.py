@@ -2,16 +2,21 @@ import RPi.GPIO as GPIO
 import argparse
 import time
 import signal
+
 from Pulse import Pulse
 from copy import deepcopy
 import json
 
 
-
+# Static Globals
+tolerance = .20
+collect = False
 LISTEN_PIN = 13
 signal_detected = False
 
 currentPulse = Pulse()
+currentPulse.rise = time.time()
+currentPulse.fall = currentPulse.rise
 pulseQueue = [currentPulse]
 
 logfile = open("logfile.csv", "w+")
@@ -27,10 +32,9 @@ def pulseCopy(src):
     dest.rise = src.rise
     dest.fall = src.fall
     dest.period = src.period
-    dest.width = src.width
+    dest.length = src.length
 
     return dest
-
 
 def pulseDetect(LISTEN_PIN):
 
@@ -38,16 +42,14 @@ def pulseDetect(LISTEN_PIN):
         # Get the rise time of the next pulse
         rise = time.time()
 
-        # Calculate the period of the current pulse
-        currentPulse.period = rise - currentPulse.rise
-        currentPulse.width = currentPulse.fall - currentPulse.rise
+        # Calculate the period of the current pulse (us)
+        currentPulse.period = (rise - currentPulse.rise) *1000000
+        currentPulse.length = (currentPulse.fall - currentPulse.rise) * 1000000
 
-        # Add Pulse to the process queue
-        qPulse = pulseCopy(currentPulse)
-
-        # Noise filter
-        # if (qPulse.period > .01):
-        pulseQueue.append(qPulse)
+        # Add valid Pulses to the process queue
+        if (currentPulse.length > 0) :
+            qPulse = pulseCopy(currentPulse)
+            pulseQueue.append(qPulse)
 
         # Update Current Pulse with the rise time of the next pulse
         currentPulse.rise = rise
@@ -56,6 +58,18 @@ def pulseDetect(LISTEN_PIN):
         # Get the time of the falling edge
         fall = time.time()
         currentPulse.fall = fall
+
+def inTolerance(sigPulse, sigH, sigL):
+
+    # Calculate the durations of high and low segments of the pulse
+    highTime = sigPulse.length
+    lowTime = sigPulse.period - highTime
+
+    # Are the durations in tolerance for this protocol?
+    rc = sigH * (1-tolerance) < highTime < sigH * (1+tolerance)
+    rc &= sigL * (1-tolerance) < lowTime < sigL * (1+tolerance)
+
+    return rc
 
 if __name__ == '__main__':
 
@@ -81,30 +95,57 @@ if __name__ == '__main__':
         # Load the protocols
         f = open('protocols.json', 'r')
         protos = json.loads(f.read())
+        code = 0
 
         while(True):
             time.sleep(2)
+
             # Process the pulse queue
             pulseCnt = len(pulseQueue)
-
             for i in range(0,pulseCnt):
                 sigPulse = pulseQueue.pop(0)
-                codes = {}
+                logfile.write(str(sigPulse.period)+",\n")
 
-                # Search in protocols
+                # Long Pulse - Could be a Sync pulse or other large break in data
+                if sigPulse.period > 4300:
+                    collect = False
+                    if (code != 0):
+                        print(code)
+                    code = 0
+
+                # Search in protocols for a sync
                 for p in protos:
 
-                    # Calculate protcol tolerance
-                    protoLowBound = (p['pulseLength'] - (p['pulseLength'] * tolerance/50))
-                    protoUpperBound = (p['pulseLength'] + (p['pulseLength'] * tolerance/50))
+                    # If we are in the collection state -
+                    if collect:
+                        segLength = sigPulse.period  / (protos[p]['1']['low'] + protos[p]['1']['high'])
 
-                    codes[p['pulseLength']] = codes[p['pulseLength']] << 1
+                        code << 1
 
-                    # Check id Pulse is within tolerance
-                    if (sigPulse.width  in range(protoHighBound * p['0']['low'], protoHighBound * p['0']['high']):
-                    else if (sigPulse.width  in range(protoHighBound * p['1']['low'], protoHighBound * p['1']['high']):
+                        dataBit1H = protos[p]['1']['high'] * segLength
+                        dataBit0H = protos[p]['0']['high'] * segLength
+                        dataBit1L = protos[p]['1']['low'] * segLength
+                        dataBit0L = protos[p]['0']['low'] * segLength
+
+                        if inTolerance(sigPulse,dataBit1H,dataBit1L):
+                            code |= 1
+                        elif not inTolerance(sigPulse,dataBit0H,dataBit0L):
+                            # Garbage Data - Abort collection
+                            code = 0
+                            collect = False
 
                     else :
+                        # Calculate the size of a sync bit segment
+                        pulseSeg = sigPulse.period / (protos[p]['syncBit']['low'] + protos[p]['syncBit']['high'])
 
-                # print(str(i) + ":" +  str(sigPulse.period) + ":" + str((sigPulse.width)/sigPulse.period))
+                        # Calculate the appropriate high and low timing for this signal and protocol
+                        syncBitH = protos[p]['syncBit']['high'] * pulseSeg
+                        syncBitL = protos[p]['syncBit']['low'] * pulseSeg
+
+                        # Check for sync bit timing
+                        if inTolerance(sigPulse,syncBitH,syncBitL):
+                            print("SYNC BIT DETECTED " + p)
+                            collect = True
+                            break
+
 
